@@ -21,6 +21,15 @@ const { values } = parseArgs({
 
 const addTimestamp = values.timestamp || false;
 
+function getDateFromFilename(filename) {
+  const match = filename.match(/^(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})/);
+  if (match) {
+    const [year, month, day, hour, minute] = match[1].split('-');
+    return `${year}-${month}-${day} ${hour}:${minute}`;
+  }
+  return 'Unknown Date';
+}
+
 async function checkEnvironment() {
   console.log("Checking environment...");
   const fontPath = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';
@@ -51,6 +60,14 @@ async function cleanupOutputDir() {
   for (const file of files) {
     unlinkSync(path.join(outputDir, file));
   }
+  
+  // Remove compilation.mp4 if it exists
+  const compilationPath = path.join(process.cwd(), finalOutput);
+  if (existsSync(compilationPath)) {
+    unlinkSync(compilationPath);
+    console.log(`Removed ${finalOutput}`);
+  }
+  
   console.log("Cleanup completed.");
 }
 
@@ -153,6 +170,8 @@ async function processVideos() {
     console.log(`Merged into ${mergedSegments.length} segments`);
     console.log('Merged segments:', JSON.stringify(mergedSegments, null, 2));
 
+    const fileDate = getDateFromFilename(file);
+
     for (let i = 0; i < mergedSegments.length; i++) {
       const segment = mergedSegments[i];
       const clipOutput = path.join(outputDir, `clip_${file}_${i.toString().padStart(3, '0')}_${segment.start.toFixed(2)}-${segment.end.toFixed(2)}.mp4`);
@@ -172,8 +191,9 @@ async function processVideos() {
       let ffmpegCommand = `ffmpeg -i "${inputPath}" -ss ${startTime} -t ${duration}`;
 
       if (addTimestamp) {
-        const escapedText = `${file.replace(/[\\':]/g, '\\\\$&')} - %{pts\\\\:hms}`;
-        const drawTextFilter = `drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:fontsize=24:fontcolor=white:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-tw)/2:y=h-th-10:text='${escapedText}'`;
+        const clipTimeRange = `${formatTime(startTime)}-${formatTime(endTime)}`;
+        const escapedText = `${fileDate} | ${clipTimeRange}`.replace(/:/g, '\\:').replace(/'/g, "\\'");
+        const drawTextFilter = `drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:fontsize=16:fontcolor=white:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-tw)/2:y=h-th-10:text='${escapedText}'`;
         ffmpegCommand += ` -vf "${drawTextFilter}"`;
       }
 
