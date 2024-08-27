@@ -61,3 +61,21 @@ Psst... it's MIT licensed! But we like to call it the "I Just Want Some Peace an
 Remember, in the game of noisy neighbors, when you play the long game, everybody wins. Except maybe the guy with the wall-shaking sound system. He might need to tone it down a bit. But that's kind of the point, isn't it? 😉
 
 Now go forth and reclaim your right to a good night's sleep!
+
+## Usage
+
+Run the script with the following optional flags:
+
+- `--timestamp`: Add a timestamp to the video clips (default: false)
+- `--threshold`: Set the silence detection threshold (default: '-60dB')
+- `--bufferTime`: Set the buffer time in seconds (default: 4)
+
+Example:
+```
+bun run encode.js --timestamp --threshold='-50dB' --bufferTime=3
+```
+These flags allow you to customize the behavior of the script:
+
+- `--timestamp`: When set, adds a timestamp overlay to each clip.
+- `--threshold`: Adjusts the silence detection sensitivity. A higher value (e.g., '-50dB') will detect more subtle sounds, while a lower value (e.g., '-70dB') will only detect louder sounds.
+- `--bufferTime`: Sets the amount of time (in seconds) to include before and after each non-silent segment. This helps preserve context around the detected noise.

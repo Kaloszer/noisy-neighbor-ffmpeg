@@ -8,18 +8,20 @@ import { randomUUID } from 'crypto';
 const inputDir = './input_videos';
 const outputDir = './output_clips';
 const finalOutput = 'compilation.mp4';
-const threshold = '-60dB';
-const bufferTime = 4;
 
 const execAsync = promisify(exec);
 
 const { values } = parseArgs({
   options: {
-    timestamp: { type: 'boolean' }
+    timestamp: { type: 'boolean' },
+    threshold: { type: 'string' },
+    bufferTime: { type: 'string' }
   }
 });
 
 const addTimestamp = values.timestamp || false;
+const threshold = values.threshold || '-60dB';
+const bufferTime = parseFloat(values.bufferTime) || 4;
 
 function getDateFromFilename(filename) {
   const match = filename.match(/^(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})/);
