@@ -1,5 +1,8 @@
 # 🔊 Noisy Neighbor Compiler
 
+![GIF 8-27-2024 18-47-01](https://github.com/user-attachments/assets/0d0d55af-0297-4c27-b9b5-b5cdeea66c41)
+
+
 ## Because sometimes, peace and quiet is just a script away! 🏠👨‍⚖️
 
 Are your neighbors treating your walls like they're made of rubber? Is their idea of a lullaby a impromptu heavy metal concert at 3 AM? Fear not, weary apartment dweller! The Noisy Neighbor Compiler is here to turn those sleepless nights into concrete evidence.
