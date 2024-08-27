@@ -72,6 +72,7 @@ Run the script with the following optional flags:
 - `--timestamp`: Add a timestamp to the video clips (default: false)
 - `--threshold`: Set the silence detection threshold (default: '-60dB')
 - `--bufferTime`: Set the buffer time in seconds (default: 4)
+- `--googlephotosdate`: Enable parsing of Google Photos date format (default: false) [VID_YYYYMMDD_HHMM...]
 
 Example:
 ```

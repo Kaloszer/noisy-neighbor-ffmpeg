@@ -15,19 +15,29 @@ const { values } = parseArgs({
   options: {
     timestamp: { type: 'boolean' },
     threshold: { type: 'string' },
-    bufferTime: { type: 'string' }
+    bufferTime: { type: 'string' },
+    googlephotosdate: { type: 'boolean' }  // New flag
   }
 });
 
 const addTimestamp = values.timestamp || false;
 const threshold = values.threshold || '-60dB';
 const bufferTime = parseFloat(values.bufferTime) || 4;
+const useGooglePhotosDate = values.googlephotosdate || false;  // New variable
 
 function getDateFromFilename(filename) {
-  const match = filename.match(/^(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})/);
-  if (match) {
-    const [year, month, day, hour, minute] = match[1].split('-');
-    return `${year}-${month}-${day} ${hour}:${minute}`;
+  if (useGooglePhotosDate) {
+    const match = filename.match(/^VID_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})/);
+    if (match) {
+      const [, year, month, day, hour, minute] = match;
+      return `${year}-${month}-${day} ${hour}:${minute}`;
+    }
+  } else {
+    const match = filename.match(/^(\d{4}-\d{2}-\d{2}-\d{2}-\d{2})/);
+    if (match) {
+      const [year, month, day, hour, minute] = match[1].split('-');
+      return `${year}-${month}-${day} ${hour}:${minute}`;
+    }
   }
   return 'Unknown Date';
 }
