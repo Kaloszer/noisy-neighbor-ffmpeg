@@ -4,12 +4,26 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, readdir
 import path from 'path';
 import { parseArgs } from 'util';
 import { randomUUID } from 'crypto';
+import { spawn } from 'child_process';
 
 const inputDir = './input_videos';
 const outputDir = './output_clips';
 const finalOutput = 'compilation.mp4';
 
 const execAsync = promisify(exec);
+
+// Add this new function
+const execAsyncWithLargeBuffer = (command) => {
+  return new Promise((resolve, reject) => {
+    exec(command, { maxBuffer: 1024 * 1024 * 100 }, (error, stdout, stderr) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve({ stdout, stderr });
+      }
+    });
+  });
+};
 
 const { values } = parseArgs({
   options: {
@@ -213,7 +227,7 @@ async function processVideos() {
       
       try {
         console.log(`Executing ffmpeg command: ${ffmpegCommand}`);
-        await execAsync(ffmpegCommand);
+        await execAsyncWithLargeBuffer(ffmpegCommand);
         console.log(`Successfully extracted segment ${i + 1} from ${file}`);
         allClips.push(clipOutput);
       } catch (error) {
@@ -255,7 +269,7 @@ async function processVideos() {
 
   // Combine the sorted clips
   try {
-    await execAsync(`ffmpeg -f concat -safe 0 -i "${clipList}" -c copy "${finalOutput}"`);
+    await execAsyncWithLargeBuffer(`ffmpeg -f concat -safe 0 -i "${clipList}" -c copy "${finalOutput}"`);
     console.log(`Compilation complete. Output file: ${finalOutput}`);
   } catch (error) {
     console.error('Error combining clips:', error);
