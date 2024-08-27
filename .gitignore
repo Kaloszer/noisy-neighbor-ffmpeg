@@ -1,3 +1,8 @@
+# Ignore contents of these folders
 input_videos/*
 output_clips/*
 compilation.mp4
+
+# But don't ignore the folders themselves and their placeholder files
+!input_videos/.gitkeep
+!output_clips/.gitkeep
