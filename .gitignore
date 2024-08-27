@@ -2,7 +2,8 @@
 input_videos/*
 output_clips/*
 compilation.mp4
+node_modules/
 
 # But don't ignore the folders themselves and their placeholder files
 !input_videos/.gitkeep
-!output_clips/.gitkeep
+!output_clips/.gitkeeph
