@@ -29,6 +29,7 @@ This project is your ally in the ongoing struggle for peace and quiet. It takes 
 
 1. Clone this repo (as quietly as your neighbors are not).
 2. Install the dependencies (you'll need ffmpeg and Bun).
+3. `bun install` - to install the dependencies as if it were good ol' npm
 3. Place your video files in the `input_videos` directory.
 4. Run the script:
    ```
