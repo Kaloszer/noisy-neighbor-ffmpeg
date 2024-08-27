@@ -5,6 +5,7 @@ import path from 'path';
 import { parseArgs } from 'util';
 import { randomUUID } from 'crypto';
 import { spawn } from 'child_process';
+import cliProgress from 'cli-progress';
 
 const inputDir = './input_videos';
 const outputDir = './output_clips';
@@ -30,14 +31,18 @@ const { values } = parseArgs({
     timestamp: { type: 'boolean' },
     threshold: { type: 'string' },
     bufferTime: { type: 'string' },
-    googlephotosdate: { type: 'boolean' }  // New flag
+    googlephotosdate: { type: 'boolean' },
+    reencode: { type: 'boolean' },
+    verbose: { type: 'boolean' },
   }
 });
 
 const addTimestamp = values.timestamp || false;
 const threshold = values.threshold || '-60dB';
 const bufferTime = parseFloat(values.bufferTime) || 4;
-const useGooglePhotosDate = values.googlephotosdate || false;  // New variable
+const useGooglePhotosDate = values.googlephotosdate || false;
+const reencodeVideo = values.reencode || false;
+const verbose = values.verbose || false;
 
 function getDateFromFilename(filename) {
   if (useGooglePhotosDate) {
@@ -86,14 +91,14 @@ async function cleanupOutputDir() {
   for (const file of files) {
     unlinkSync(path.join(outputDir, file));
   }
-  
+
   // Remove compilation.mp4 if it exists
   const compilationPath = path.join(process.cwd(), finalOutput);
   if (existsSync(compilationPath)) {
     unlinkSync(compilationPath);
     console.log(`Removed ${finalOutput}`);
   }
-  
+
   console.log("Cleanup completed.");
 }
 
@@ -111,6 +116,15 @@ async function detectSilence(inputPath, outputPath) {
   }
 }
 
+// Add these new progress bars
+const multibar = new cliProgress.MultiBar({
+  clearOnComplete: false,
+  hideCursor: true,
+  format: ' {bar} | {filename} | {value}/{total} segments'
+}, cliProgress.Presets.shades_classic);
+
+let overallProgress;
+
 async function processVideos() {
   await cleanupOutputDir();
 
@@ -118,9 +132,12 @@ async function processVideos() {
     mkdirSync(outputDir, { recursive: true });
   }
 
-  const videoFiles = readdirSync(inputDir).filter(file => 
+  const videoFiles = readdirSync(inputDir).filter(file =>
     ['.mp4', '.avi', '.mov'].includes(path.extname(file).toLowerCase())
   );
+
+  overallProgress = multibar.create(videoFiles.length, 0);
+  overallProgress.update(0, { filename: 'Overall Progress' });
 
   const allClips = [];
 
@@ -198,10 +215,13 @@ async function processVideos() {
 
     const fileDate = getDateFromFilename(file);
 
+    const fileProgress = multibar.create(mergedSegments.length, 0);
+    fileProgress.update(0, { filename: file });
+
     for (let i = 0; i < mergedSegments.length; i++) {
       const segment = mergedSegments[i];
       const clipOutput = path.join(outputDir, `clip_${file}_${i.toString().padStart(3, '0')}_${segment.start.toFixed(2)}-${segment.end.toFixed(2)}.mp4`);
-      
+
       const startTime = Math.max(segment.start - bufferTime, 0);
       const endTime = Math.min(segment.end + bufferTime, videoDuration);
       const duration = endTime - startTime;
@@ -220,25 +240,33 @@ async function processVideos() {
         const clipTimeRange = `${formatTime(startTime)}-${formatTime(endTime)}`;
         const escapedText = `${fileDate} | ${clipTimeRange}`.replace(/:/g, '\\:').replace(/'/g, "\\'");
         const drawTextFilter = `drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:fontsize=16:fontcolor=white:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-tw)/2:y=h-th-10:text='${escapedText}'`;
-        ffmpegCommand += ` -vf "${drawTextFilter}"`;
+        ffmpegCommand += ` -vf "${drawTextFilter},fps=30"`;
+      } else {
+        ffmpegCommand += ` -vf "fps=30"`;
       }
 
-      ffmpegCommand += ` -c:a copy "${clipOutput}"`;
-      
+      ffmpegCommand += ` -c:v libx264 -crf 18 -preset ultrafast -c:a copy "${clipOutput}"`;
+
       try {
-        console.log(`Executing ffmpeg command: ${ffmpegCommand}`);
+        if (verbose) console.log(`Executing ffmpeg command: ${ffmpegCommand}`);
         await execAsyncWithLargeBuffer(ffmpegCommand);
-        console.log(`Successfully extracted segment ${i + 1} from ${file}`);
+        if (verbose) console.log(`Successfully extracted segment ${i + 1} from ${file}`);
         allClips.push(clipOutput);
+        fileProgress.increment();
       } catch (error) {
         console.error(`Error extracting segment ${i + 1} from ${file}:`, error);
-        console.error(`Failed ffmpeg command: ${ffmpegCommand}`);
+        if (verbose) console.error(`Failed ffmpeg command: ${ffmpegCommand}`);
       }
     }
 
+    fileProgress.stop();
     unlinkSync(outputPath);
     console.log(`Finished processing ${file}`);
+    overallProgress.increment();
   }
+
+  overallProgress.stop();
+  multibar.stop();
 
   // After processing all videos
   console.log(`Total clips extracted: ${allClips.length}`);
@@ -269,7 +297,18 @@ async function processVideos() {
 
   // Combine the sorted clips
   try {
-    await execAsyncWithLargeBuffer(`ffmpeg -f concat -safe 0 -i "${clipList}" -c copy "${finalOutput}"`);
+    let ffmpegCommand = `ffmpeg -f concat -safe 0 -i "${clipList}"`;
+
+    if (reencodeVideo) {
+      // Re-encode with same resolution, lower bitrate
+      ffmpegCommand += ` -c:v libx264 -crf 23 -preset medium -c:a aac -b:a 128k "${finalOutput}"`;
+    } else {
+      // Copy without re-encoding
+      ffmpegCommand += ` -c copy "${finalOutput}"`;
+    }
+
+    if (verbose) console.log(`Executing final ffmpeg command: ${ffmpegCommand}`);
+    await execAsyncWithLargeBuffer(ffmpegCommand);
     console.log(`Compilation complete. Output file: ${finalOutput}`);
   } catch (error) {
     console.error('Error combining clips:', error);
